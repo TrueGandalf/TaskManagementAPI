@@ -57,4 +57,19 @@ public class SiteTaskController : ControllerBase
 
         return Ok(tasks);
     }
+
+    [HttpGet("receive-completion-events")]
+    public async Task<IActionResult> ReceiveCompletionEvents(
+        [FromQuery] int count,
+        [FromServices] ServiceBusHandler serviceBusHandler)
+    {
+        var events = await serviceBusHandler.ReceiveCompletionEventsAsync(count);
+
+        if (events.Count == 0)
+        {
+            return Ok("No events found in the queue");
+        }
+
+        return Ok(events);
+    }
 }

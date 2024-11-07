@@ -8,7 +8,8 @@ namespace TaskManagementAPI.Services;
 public class ServiceBusHandler
 {
     private readonly string _connectionString;
-    private readonly string _queueName;
+    private readonly string _tasksQueueName;
+    private readonly string _completionEventsQueueName;
     private readonly ServiceBusClient _client;
     private readonly ServiceBusSender _sender;
     private readonly TimeSpan _maxWaitTime;
@@ -16,10 +17,11 @@ public class ServiceBusHandler
     public ServiceBusHandler(IConfiguration configuration)
     {
         _connectionString = configuration["ServiceBus:ConnectionString"]!;
-        _queueName = configuration["ServiceBus:QueueName"]!;
+        _tasksQueueName = configuration["ServiceBus:QueueName"]!;
+        _completionEventsQueueName = configuration["ServiceBus:CompletionEventQueueName"]!;
 
         _client = new ServiceBusClient(_connectionString);
-        _sender = _client.CreateSender(_queueName);
+        _sender = _client.CreateSender(_tasksQueueName);
         
         int maxWaitTimeInSeconds = int.TryParse(
             configuration["ServiceBus:ReceivingMaxWaitTimeInSeconds"], out var result)
@@ -50,7 +52,7 @@ public class ServiceBusHandler
     public async Task StartReceivingMessagesAsync(Func<SiteTask, Task> processTask)
     {
         ServiceBusProcessor processor = _client.CreateProcessor(
-            _queueName, new ServiceBusProcessorOptions()); // remove , new ServiceBusProcessorOptions()
+            _tasksQueueName, new ServiceBusProcessorOptions()); // remove , new ServiceBusProcessorOptions()
 
         processor.ProcessMessageAsync += async args =>
         {
@@ -79,7 +81,7 @@ public class ServiceBusHandler
     {
         var tasks = new List<SiteTask>();
 
-        var receiver = _client.CreateReceiver(_queueName);
+        var receiver = _client.CreateReceiver(_tasksQueueName);
 
         try
         {
@@ -96,6 +98,15 @@ public class ServiceBusHandler
                 {
                     tasks.Add(siteTask);
                     await receiver.CompleteMessageAsync(message);
+
+                    var completionEvent = new SiteTaskCompletionEvent
+                    {
+                        TaskId = siteTask.Id,
+                        TaskName = siteTask.Name,
+                        Status = siteTask.Status.ToString(),
+                        CompletedAt = DateTime.UtcNow
+                    };
+                    await SendCompletionEventAsync(completionEvent);
                 }
             }
         }
@@ -105,5 +116,54 @@ public class ServiceBusHandler
         }
 
         return tasks;
+    }
+
+    public async Task<List<SiteTaskCompletionEvent>> ReceiveCompletionEventsAsync(int maxMessagesCount)
+    {
+        var events = new List<SiteTaskCompletionEvent>();
+
+        var receiver = _client.CreateReceiver(_completionEventsQueueName);
+
+        try
+        {
+            var receivedMessages = await receiver.ReceiveMessagesAsync(
+                maxMessages: maxMessagesCount,
+                maxWaitTime: _maxWaitTime);
+
+            foreach (var message in receivedMessages)
+            {
+                var messageBody = message.Body.ToString();
+                var completionEvent = JsonSerializer.Deserialize<SiteTaskCompletionEvent>(messageBody);
+
+                if (completionEvent != null)
+                {
+                    events.Add(completionEvent);
+                    await receiver.CompleteMessageAsync(message);
+                }
+            }
+        }
+        finally
+        {
+            await receiver.DisposeAsync();
+        }
+
+        return events;
+    }
+
+    public async Task SendCompletionEventAsync(SiteTaskCompletionEvent completionEvent)
+    {
+        var sender = _client.CreateSender(_completionEventsQueueName);
+        var messageBody = JsonSerializer.Serialize(completionEvent);
+        ServiceBusMessage message = new ServiceBusMessage(messageBody);
+
+        try
+        {
+            await sender.SendMessageAsync(message);
+            Console.WriteLine($"Completion event sent: {messageBody}");
+        }
+        finally
+        {
+            await sender.DisposeAsync();
+        }
     }
 }
