@@ -26,7 +26,8 @@
       "launchUrl": "taskManagementAPI",
       "applicationUrl": "https://localhost:7090;http://localhost:5094",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "AZURE_SERVICE_BUS_CONNECTION_STRING": "replace_it_for_local_testing_and_dont_commit_it"
       }
     },
     "IIS Express": {

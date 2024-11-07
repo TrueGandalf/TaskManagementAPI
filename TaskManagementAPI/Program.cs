@@ -11,6 +11,8 @@ namespace TaskManagementAPI
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            SubstituteConfigurations(builder);
+
             // Add services to the container.
             builder.Services.AddSingleton<ISiteTaskService, SiteTaskService>(); // singleton for temp inmemory testing
             builder.Services.AddSingleton<ServiceBusHandler>();
@@ -38,13 +40,24 @@ namespace TaskManagementAPI
 
             async Task ProcessTask(SiteTask task)
             {
-                Console.WriteLine($"Processing task: {task.Name}"); 
+                Console.WriteLine($"Processing task: {task.Name}");
                 // todo: add some logic here
             }
 
             await serviceBusHandler.StartReceivingMessagesAsync(ProcessTask);
 
             app.Run();
+        }
+
+        private static void SubstituteConfigurations(WebApplicationBuilder builder)
+        {
+            var configuration = builder.Configuration;
+
+            var serviceBusConnectionString =
+                Environment.GetEnvironmentVariable("AZURE_SERVICE_BUS_CONNECTION_STRING")
+                ?? configuration["ServiceBus:ConnectionString"];
+
+            configuration["ServiceBus:ConnectionString"] = serviceBusConnectionString;
         }
     }
 }

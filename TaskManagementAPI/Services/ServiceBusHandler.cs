@@ -28,7 +28,9 @@ public class ServiceBusHandler
         try
         {
             await _sender.SendMessageAsync(message);
-            Console.WriteLine($"Message sent: {messageBody}");
+            // this is a test app and it can be freezed sometimes
+            // cause we don't use async logging
+            _ = Task.Run(() => Console.WriteLine($"Message sent: {messageBody}"));
         }
         catch (Exception ex)
         {
