@@ -42,4 +42,19 @@ public class SiteTaskController : ControllerBase
         var siteTasks = await _siteTaskService.GetAllSiteTasks();
         return Ok(siteTasks);
     }
+
+    [HttpGet("receive-messages")]
+    public async Task<IActionResult> ReceiveMessages(
+        [FromQuery] int count,
+        [FromServices] ServiceBusHandler serviceBusHandler)
+    {
+        var tasks = await serviceBusHandler.ReceiveMessagesAsync(count);
+
+        if (tasks.Count == 0)
+        {
+            return Ok("No messages found in the queue");
+        }
+
+        return Ok(tasks);
+    }
 }
