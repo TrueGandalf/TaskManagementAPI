@@ -2,7 +2,7 @@
 
 namespace TaskManagementAPI.DTOs;
 
-public class SiteTask
+public class SiteTaskDTO
 {
     public int Id { get; set; }
     public string Name { get; set; }

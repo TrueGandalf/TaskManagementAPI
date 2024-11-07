@@ -5,8 +5,8 @@ namespace TaskManagementAPI.Interfaces;
 
 public interface ISiteTaskService
 {
-    Task AddSiteTask(SiteTask siteTask);
+    Task AddSiteTask(SiteTaskDTO siteTask);
     Task DeleteSiteTask(int taskId);
     Task UpdateSiteTaskStatus(int taskId, SiteTaskStatus newStatus);
-    Task<IEnumerable<SiteTask>> GetAllSiteTasks();
+    Task<IEnumerable<SiteTaskDTO>> GetAllSiteTasks();
 }

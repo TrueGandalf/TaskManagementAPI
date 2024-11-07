@@ -6,9 +6,9 @@ namespace TaskManagementAPI.Services;
 
 public class SiteTaskService : ISiteTaskService
 {
-    private readonly List<SiteTask> _siteTasks = new(); // InMemory test approach temp instead of EF
+    private readonly List<SiteTaskDTO> _siteTasks = new(); // InMemory test approach temp instead of EF
 
-    public async Task AddSiteTask(SiteTask siteTask)
+    public async Task AddSiteTask(SiteTaskDTO siteTask)
     {
         siteTask.Id = (_siteTasks.LastOrDefault()?.Id ?? 0) + 1;
         _siteTasks.Add(siteTask);
@@ -27,7 +27,7 @@ public class SiteTaskService : ISiteTaskService
         siteTask!.Status = newStatus;
     }
 
-    public async Task<IEnumerable<SiteTask>> GetAllSiteTasks()
+    public async Task<IEnumerable<SiteTaskDTO>> GetAllSiteTasks()
     {
         return _siteTasks;
     }

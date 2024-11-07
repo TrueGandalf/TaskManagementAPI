@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
+using TaskManagementAPI.Data;
 using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Interfaces;
 using TaskManagementAPI.Services;
@@ -12,6 +14,9 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         SubstituteConfigurations(builder);
+
+        builder.Services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseSqlServer(builder.Configuration.GetConnectionString("TaskManagementDB")));
 
         // Add services to the container.
         builder.Services.AddSingleton<ISiteTaskService, SiteTaskService>(); // singleton for temp inmemory testing
@@ -46,7 +51,7 @@ public class Program
     {
         var serviceBusHandler = app.Services.GetRequiredService<ServiceBusHandler>();
 
-        async Task ProcessTask(SiteTask task)
+        async Task ProcessTask(SiteTaskDTO task)
         {
             Console.WriteLine($"Processing task: {task.Name}");
             // todo: add some logic here

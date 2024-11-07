@@ -30,7 +30,7 @@ public class ServiceBusHandler
         _maxWaitTime = TimeSpan.FromSeconds(maxWaitTimeInSeconds);
     }
 
-    public async Task SendMessageAsync(SiteTask siteTask)
+    public async Task SendMessageAsync(SiteTaskDTO siteTask)
     {
         var messageBody = JsonSerializer.Serialize(siteTask);
         var message = new ServiceBusMessage(messageBody);
@@ -49,7 +49,7 @@ public class ServiceBusHandler
         }
     }
 
-    public async Task StartReceivingMessagesAsync(Func<SiteTask, Task> processTask)
+    public async Task StartReceivingMessagesAsync(Func<SiteTaskDTO, Task> processTask)
     {
         ServiceBusProcessor processor = _client.CreateProcessor(
             _tasksQueueName, new ServiceBusProcessorOptions()); // remove , new ServiceBusProcessorOptions()
@@ -57,7 +57,7 @@ public class ServiceBusHandler
         processor.ProcessMessageAsync += async args =>
         {
             var messageBody = args.Message.Body.ToString();
-            var siteTask = JsonSerializer.Deserialize<SiteTask>(messageBody);
+            var siteTask = JsonSerializer.Deserialize<SiteTaskDTO>(messageBody);
 
             if (siteTask != null)
             {
@@ -77,9 +77,9 @@ public class ServiceBusHandler
         await processor.StartProcessingAsync();
     }
 
-    public async Task<List<SiteTask>> ReceiveMessagesAsync(int maxMessagesCount)
+    public async Task<List<SiteTaskDTO>> ReceiveMessagesAsync(int maxMessagesCount)
     {
-        var tasks = new List<SiteTask>();
+        var tasks = new List<SiteTaskDTO>();
 
         var receiver = _client.CreateReceiver(_tasksQueueName);
 
@@ -92,7 +92,7 @@ public class ServiceBusHandler
             foreach (var message in receivedMessages)
             {
                 var messageBody = message.Body.ToString();
-                var siteTask = JsonSerializer.Deserialize<SiteTask>(messageBody);
+                var siteTask = JsonSerializer.Deserialize<SiteTaskDTO>(messageBody);
 
                 if (siteTask != null)
                 {

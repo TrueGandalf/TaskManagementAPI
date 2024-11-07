@@ -20,7 +20,7 @@ public class SiteTaskController : ControllerBase
     // todo: maybe delete excess endpoint names
     [HttpPost("add")]
     public async Task<IActionResult> AddSiteTask(
-        [FromBody] SiteTask siteTask,
+        [FromBody] SiteTaskDTO siteTask,
         [FromServices] ServiceBusHandler serviceBusHandler)
     {
         await _siteTaskService.AddSiteTask(siteTask);
