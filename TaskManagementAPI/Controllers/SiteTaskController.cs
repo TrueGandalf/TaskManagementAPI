@@ -2,6 +2,7 @@
 using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Enums;
 using TaskManagementAPI.Interfaces;
+using TaskManagementAPI.Services;
 
 namespace TaskManagementAPI.Controllers;
 
@@ -18,10 +19,13 @@ public class SiteTaskController : ControllerBase
 
     // todo: maybe delete excess endpoint names
     [HttpPost("add")]
-    public async Task<IActionResult> AddSiteTask([FromBody] SiteTask siteTask)
+    public async Task<IActionResult> AddSiteTask(
+        [FromBody] SiteTask siteTask,
+        [FromServices] ServiceBusHandler serviceBusHandler)
     {
         await _siteTaskService.AddSiteTask(siteTask);
-        return Ok("Task added successfully.");
+        await serviceBusHandler.SendMessageAsync(siteTask);
+        return Ok("Task added and message sent to Service Bus.");
     }
 
     // todo: change put request so it will use a json request with id and new SiteTaskStatus
