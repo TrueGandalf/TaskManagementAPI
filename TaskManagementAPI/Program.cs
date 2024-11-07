@@ -63,6 +63,11 @@ public class Program
             Environment.GetEnvironmentVariable("AZURE_SERVICE_BUS_CONNECTION_STRING")
             ?? configuration["ServiceBus:ConnectionString"];
 
+        var taskManagementDbConnectionString =
+            Environment.GetEnvironmentVariable("TASK-MANAGEMENT-DB-CONNECTION-STRING")
+            ?? configuration["ConnectionStrings:TaskManagementDB"];
+
         configuration["ServiceBus:ConnectionString"] = serviceBusConnectionString;
+        configuration["ConnectionStrings:TaskManagementDB"] = taskManagementDbConnectionString;
     }
 }
