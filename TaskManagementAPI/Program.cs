@@ -93,7 +93,7 @@ public class Program
             ?? configuration["ServiceBus:ConnectionString"];
 
         var taskManagementDbConnectionString =
-            Environment.GetEnvironmentVariable("TASK-MANAGEMENT-DB-CONNECTION-STRING")
+            Environment.GetEnvironmentVariable("TASK_MANAGEMENT_DB_CONNECTION_STRING")
             ?? configuration["ConnectionStrings:TaskManagementDB"];
 
         configuration["ServiceBus:ConnectionString"] = serviceBusConnectionString;
