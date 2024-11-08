@@ -7,6 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="TaskManagementAPI.Tests\**" />
+    <Content Remove="TaskManagementAPI.Tests\**" />
+    <EmbeddedResource Remove="TaskManagementAPI.Tests\**" />
+    <None Remove="TaskManagementAPI.Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.18.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
