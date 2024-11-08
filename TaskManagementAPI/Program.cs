@@ -4,6 +4,7 @@ using TaskManagementAPI.Data;
 using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Interfaces;
 using TaskManagementAPI.Services;
+using Microsoft.OpenApi.Models;
 
 namespace TaskManagementAPI;
 
@@ -30,9 +31,32 @@ public class Program
                 options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()); // Converts enums to/from strings
             });
 
+        // Register Swagger services
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen(c =>
+        {
+            c.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Version = "v1",
+                Title = "Task Management API",
+                Description = "An API to manage tasks and demonstrate service bus integration"
+            });
+        });
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
+        if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+        {
+            // Enable Swagger middleware to serve the generated JSON and UI
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Task Management API v1");
+                c.RoutePrefix = string.Empty; // Set Swagger UI to be the default route
+            });
+        }
+
 
         app.UseHttpsRedirection();
 
@@ -41,7 +65,7 @@ public class Program
         app.MapControllers();
 
         // Start receiving messages before running the app
-        // turned it of to use another implementation
+        // turned it off to use another implementation
         //await ReceiveMessagesInBackground(app);
 
         app.Run();
