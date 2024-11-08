@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using TaskManagementAPI.Data;
 using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Interfaces;
 using TaskManagementAPI.Services;
-using Microsoft.OpenApi.Models;
 
 namespace TaskManagementAPI;
 
@@ -78,7 +78,6 @@ public class Program
         async Task ProcessTask(SiteTaskDTO task)
         {
             Console.WriteLine($"Processing task: {task.Name}");
-            // todo: add some logic here
         }
 
         await serviceBusHandler.StartReceivingMessagesAsync(ProcessTask);

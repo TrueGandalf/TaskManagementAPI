@@ -1,15 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Moq;
-using TaskManagementAPI.Data.Entities;
-using TaskManagementAPI.Data;
-using TaskManagementAPI.Enums;
-using TaskManagementAPI.Services;
-using Xunit;
-using TaskManagementAPI.DTOs;
-using TaskManagementAPI.Helpers;
+﻿using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using TaskManagementAPI.Data;
+using TaskManagementAPI.Data.Entities;
+using TaskManagementAPI.Enums;
+using TaskManagementAPI.Helpers;
 using TaskManagementAPI.Interfaces;
-using FluentAssertions;
+using TaskManagementAPI.Services;
 
 namespace TaskManagementAPI.TaskManagementAPI.Tests;
 

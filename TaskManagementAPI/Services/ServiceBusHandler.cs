@@ -1,8 +1,8 @@
 ﻿using Azure.Messaging.ServiceBus;
-using System.Text.Json;
-using TaskManagementAPI.DTOs;
 using Polly;
 using Polly.Retry;
+using System.Text.Json;
+using TaskManagementAPI.DTOs;
 
 namespace TaskManagementAPI.Services;
 
@@ -25,11 +25,11 @@ public class ServiceBusHandler
         _tasksQueueName = configuration["ServiceBus:QueueName"]!;
         _completionEventsQueueName = configuration["ServiceBus:CompletionEventQueueName"]!;
 
-        // Use provided ServiceBusClient for testing or create a new one for production
+        // Use provided ServiceBusClient/_receiver for testing or create a new one for production
         _client = client ?? new ServiceBusClient(configuration["ServiceBus:ConnectionString"]!);
         _receiver = receiver ?? _client.CreateReceiver(_tasksQueueName);
         _sender = _client.CreateSender(_tasksQueueName);
-        
+
         int maxWaitTimeInSeconds = int.TryParse(
             configuration["ServiceBus:ReceivingMaxWaitTimeInSeconds"], out var result)
             ? result : 5;
@@ -69,8 +69,7 @@ public class ServiceBusHandler
 
     public async Task StartReceivingMessagesAsync(Func<SiteTaskDTO, Task> processTask)
     {
-        ServiceBusProcessor processor = _client.CreateProcessor(
-            _tasksQueueName, new ServiceBusProcessorOptions()); // remove , new ServiceBusProcessorOptions()
+        ServiceBusProcessor processor = _client.CreateProcessor(_tasksQueueName);
 
         processor.ProcessMessageAsync += async args =>
         {
@@ -120,12 +119,12 @@ public class ServiceBusHandler
                         await _receiver.CompleteMessageAsync(message);
 
                         // Create and send the completion event for each processed task
-                        var completionEvent = new SiteTaskCompletionEvent
+                        var completionEvent = new SiteTaskCompletionEventDTO
                         {
                             TaskId = siteTask.Id,
                             TaskName = siteTask.Name,
-                            Status = siteTask.Status.ToString(),
-                            CompletedAt = DateTime.UtcNow
+                            TaskStatus = siteTask.Status.ToString(),
+                            TaskCompletedAt = DateTime.UtcNow
                         };
                         await SendCompletionEventAsync(completionEvent);
                     }
@@ -145,9 +144,9 @@ public class ServiceBusHandler
         return tasks;
     }
 
-    public async Task<List<SiteTaskCompletionEvent>> ReceiveCompletionEventsAsync(int maxMessagesCount)
+    public async Task<List<SiteTaskCompletionEventDTO>> ReceiveCompletionEventsAsync(int maxMessagesCount)
     {
-        var events = new List<SiteTaskCompletionEvent>();
+        var events = new List<SiteTaskCompletionEventDTO>();
 
         var receiver = _client.CreateReceiver(_completionEventsQueueName);
 
@@ -160,7 +159,7 @@ public class ServiceBusHandler
             foreach (var message in receivedMessages)
             {
                 var messageBody = message.Body.ToString();
-                var completionEvent = JsonSerializer.Deserialize<SiteTaskCompletionEvent>(messageBody);
+                var completionEvent = JsonSerializer.Deserialize<SiteTaskCompletionEventDTO>(messageBody);
 
                 if (completionEvent != null)
                 {
@@ -177,7 +176,7 @@ public class ServiceBusHandler
         return events;
     }
 
-    public async Task SendCompletionEventAsync(SiteTaskCompletionEvent completionEvent)
+    public async Task SendCompletionEventAsync(SiteTaskCompletionEventDTO completionEvent)
     {
         var sender = _client.CreateSender(_completionEventsQueueName);
         var messageBody = JsonSerializer.Serialize(completionEvent);

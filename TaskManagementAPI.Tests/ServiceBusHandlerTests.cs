@@ -1,13 +1,11 @@
-﻿using Moq;
-using System.Text.Json;
-using System.Threading.Tasks;
-using TaskManagementAPI.DTOs;
-using TaskManagementAPI.Services;
-using Microsoft.Extensions.Configuration;
+﻿using Azure.Messaging.ServiceBus;
 using FluentAssertions;
-using Xunit;
-using Azure.Messaging.ServiceBus;
+using Microsoft.Extensions.Configuration;
+using Moq;
+using System.Text.Json;
+using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Enums;
+using TaskManagementAPI.Services;
 
 namespace TaskManagementAPI.TaskManagementAPI.Tests;
 

@@ -4,7 +4,7 @@ using TaskManagementAPI.DTOs;
 namespace TaskManagementAPI.Helpers;
 
 // to implement this test app faster
-public static class DtoToEntity
+public static class DtoVsEntityConversation
 {
     public static SiteTask ToEntity(this SiteTaskDTO dto)
     {
