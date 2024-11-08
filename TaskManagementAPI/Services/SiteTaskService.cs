@@ -1,48 +1,56 @@
-﻿using TaskManagementAPI.DTOs;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using TaskManagementAPI.Data;
+using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Enums;
+using TaskManagementAPI.Helpers;
 using TaskManagementAPI.Interfaces;
 
 namespace TaskManagementAPI.Services;
 
 public class SiteTaskService : ISiteTaskService
 {
-    private readonly List<SiteTaskDTO> _siteTasks = new(); // InMemory test approach temp instead of EF
+    private readonly ApplicationDbContext _context;
 
-    public async Task AddSiteTask(SiteTaskDTO siteTask)
+    public SiteTaskService(ApplicationDbContext context)
     {
-        siteTask.Id = (_siteTasks.LastOrDefault()?.Id ?? 0) + 1;
-        _siteTasks.Add(siteTask);
+        _context = context;
+    }
+    public async Task<SiteTaskDTO> AddSiteTask(SiteTaskDTO siteTask)
+    {
+        var entity = siteTask.ToEntity();
+        var result = _context.SiteTasks.Add(entity);
+        await _context.SaveChangesAsync();
+        return entity.ToDTO();
     }
 
     public async Task UpdateSiteTaskStatus(int id, SiteTaskStatus newStatus)
     {
-        var siteTask = _siteTasks.SingleOrDefault(t => t.Id == id);
+        var siteTask = await _context.SiteTasks.FindAsync(id);
 
-        if (siteTask == null)
+        if (siteTask != null)
         {
-            // todo: inform front-end that there is no such task
-            return;
+            siteTask.Status = newStatus;
+            await _context.SaveChangesAsync();
         }
-
-        siteTask!.Status = newStatus;
     }
 
     public async Task<IEnumerable<SiteTaskDTO>> GetAllSiteTasks()
     {
-        return _siteTasks;
+        return (await _context.SiteTasks.ToListAsync()).Select(x => x.ToDTO()).ToList();
     }
 
     public async Task DeleteSiteTask(int id)
     {
-        // todo: maybe remove this repeat
-        var siteTask = _siteTasks.SingleOrDefault(t => t.Id == id);
+        var siteTask = await _context.SiteTasks.FindAsync(id);
 
         if (siteTask == null)
         {
-            // todo: inform front-end that there is no such task
-            return;
+            throw new KeyNotFoundException($"Task with ID {id} was not found.");
         }
 
-        _siteTasks.Remove(siteTask!);
+        _context.SiteTasks.Remove(siteTask);
+        await _context.SaveChangesAsync();
     }
 }

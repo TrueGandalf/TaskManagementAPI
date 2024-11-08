@@ -19,7 +19,7 @@ public class Program
             options.UseSqlServer(builder.Configuration.GetConnectionString("TaskManagementDB")));
 
         // Add services to the container.
-        builder.Services.AddSingleton<ISiteTaskService, SiteTaskService>(); // singleton for temp inmemory testing
+        builder.Services.AddScoped<ISiteTaskService, SiteTaskService>();
         builder.Services.AddSingleton<ServiceBusHandler>();
 
         // Configure controllers with JSON options for case-insensitive enum handling

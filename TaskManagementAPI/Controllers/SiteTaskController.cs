@@ -23,8 +23,8 @@ public class SiteTaskController : ControllerBase
         [FromBody] SiteTaskDTO siteTask,
         [FromServices] ServiceBusHandler serviceBusHandler)
     {
-        await _siteTaskService.AddSiteTask(siteTask);
-        await serviceBusHandler.SendMessageAsync(siteTask);
+        var result = await _siteTaskService.AddSiteTask(siteTask);
+        await serviceBusHandler.SendMessageAsync(result);
         return Ok("Task added and message sent to Service Bus.");
     }
 
