@@ -13,16 +13,21 @@ public class ServiceBusHandler
     private readonly string _completionEventsQueueName;
     private readonly ServiceBusClient _client;
     private readonly ServiceBusSender _sender;
+    private ServiceBusReceiver _receiver;
     private readonly TimeSpan _maxWaitTime;
     private readonly AsyncRetryPolicy _retryPolicy;
 
-    public ServiceBusHandler(IConfiguration configuration)
+    public ServiceBusHandler(IConfiguration configuration,
+        ServiceBusClient? client = null, // for testing
+        ServiceBusReceiver? receiver = null) // for testing
     {
         _connectionString = configuration["ServiceBus:ConnectionString"]!;
         _tasksQueueName = configuration["ServiceBus:QueueName"]!;
         _completionEventsQueueName = configuration["ServiceBus:CompletionEventQueueName"]!;
 
-        _client = new ServiceBusClient(_connectionString);
+        // Use provided ServiceBusClient for testing or create a new one for production
+        _client = client ?? new ServiceBusClient(configuration["ServiceBus:ConnectionString"]!);
+        _receiver = receiver ?? _client.CreateReceiver(_tasksQueueName);
         _sender = _client.CreateSender(_tasksQueueName);
         
         int maxWaitTimeInSeconds = int.TryParse(
@@ -94,14 +99,13 @@ public class ServiceBusHandler
     {
         var tasks = new List<SiteTaskDTO>();
 
-        // Create the receiver outside the retry logic to avoid recreating it on every retry
-        var receiver = _client.CreateReceiver(_tasksQueueName);
+        _receiver = _receiver.IsClosed ? _client.CreateReceiver(_tasksQueueName) : _receiver;
 
         try
         {
             await _retryPolicy.ExecuteAsync(async () =>
             {
-                var receivedMessages = await receiver.ReceiveMessagesAsync(
+                var receivedMessages = await _receiver.ReceiveMessagesAsync(
                     maxMessages: maxMessagesCount,
                     maxWaitTime: _maxWaitTime);
 
@@ -113,7 +117,7 @@ public class ServiceBusHandler
                     if (siteTask != null)
                     {
                         tasks.Add(siteTask);
-                        await receiver.CompleteMessageAsync(message);
+                        await _receiver.CompleteMessageAsync(message);
 
                         // Create and send the completion event for each processed task
                         var completionEvent = new SiteTaskCompletionEvent
@@ -135,7 +139,7 @@ public class ServiceBusHandler
         }
         finally
         {
-            await receiver.DisposeAsync();
+            await _receiver.DisposeAsync();
         }
 
         return tasks;
