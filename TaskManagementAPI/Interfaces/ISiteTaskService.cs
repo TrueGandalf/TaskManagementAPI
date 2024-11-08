@@ -7,6 +7,7 @@ public interface ISiteTaskService
 {
     Task<SiteTaskDTO> AddSiteTask(SiteTaskDTO siteTask);
     Task DeleteSiteTask(int taskId);
-    Task UpdateSiteTaskStatus(int taskId, SiteTaskStatus newStatus);
+    Task UpdateSiteTaskStatus(UpdateSiteTaskStatusDTO siteTaskWithNewStatus);
     Task<IEnumerable<SiteTaskDTO>> GetAllSiteTasks();
+    Task<SiteTaskDTO> GetSiteTask(int id);
 }

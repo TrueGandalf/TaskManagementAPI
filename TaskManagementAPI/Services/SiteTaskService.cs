@@ -24,13 +24,13 @@ public class SiteTaskService : ISiteTaskService
         return entity.ToDTO();
     }
 
-    public async Task UpdateSiteTaskStatus(int id, SiteTaskStatus newStatus)
+    public async Task UpdateSiteTaskStatus(UpdateSiteTaskStatusDTO siteTaskWithNewStatus)
     {
-        var siteTask = await _context.SiteTasks.FindAsync(id);
+        var siteTask = await _context.SiteTasks.FindAsync(siteTaskWithNewStatus.Id);
 
         if (siteTask != null)
         {
-            siteTask.Status = newStatus;
+            siteTask.Status = siteTaskWithNewStatus.Status;
             await _context.SaveChangesAsync();
         }
     }
@@ -51,5 +51,17 @@ public class SiteTaskService : ISiteTaskService
 
         _context.SiteTasks.Remove(siteTask);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<SiteTaskDTO> GetSiteTask(int id)
+    {
+        var siteTask = await _context.SiteTasks.FindAsync(id);
+
+        if (siteTask == null)
+        {
+            throw new KeyNotFoundException($"Task with ID {id} was not found.");
+        }
+
+        return siteTask.ToDTO();
     }
 }

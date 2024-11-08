@@ -84,6 +84,7 @@ public class Program
         await serviceBusHandler.StartReceivingMessagesAsync(ProcessTask);
     }
 
+    // to deploy this test project with ease
     private static void SubstituteConfigurations(WebApplicationBuilder builder)
     {
         var configuration = builder.Configuration;
