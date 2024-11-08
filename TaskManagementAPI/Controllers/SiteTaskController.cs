@@ -27,7 +27,7 @@ public class SiteTaskController : ControllerBase
     /// <returns>A success message confirming task addition and message sending.</returns>
     [HttpPost]
     public async Task<IActionResult> AddSiteTask(
-        [FromBody] SiteTaskDTO siteTask,
+        [FromBody] SiteTaskRequestDTO siteTask,
         [FromServices] ServiceBusHandler serviceBusHandler)
     {
         var result = await _siteTaskService.AddSiteTask(siteTask);

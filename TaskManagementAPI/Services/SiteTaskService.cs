@@ -15,7 +15,7 @@ public class SiteTaskService : ISiteTaskService
         _context = context;
     }
 
-    public async Task<SiteTaskDTO> AddSiteTask(SiteTaskDTO siteTask)
+    public async Task<SiteTaskDTO> AddSiteTask(SiteTaskRequestDTO siteTask)
     {
         var entity = siteTask.ToEntity();
         var result = _context.SiteTasks.Add(entity);

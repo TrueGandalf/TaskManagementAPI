@@ -1,9 +1,9 @@
 ﻿using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 using TaskManagementAPI.Data;
-using TaskManagementAPI.Data.Entities;
+using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Enums;
-using TaskManagementAPI.Helpers;
 using TaskManagementAPI.Interfaces;
 using TaskManagementAPI.Services;
 
@@ -32,15 +32,18 @@ public class SiteTaskServiceTests
     public async Task AddTaskAsync_ShouldAddTask()
     {
         // Arrange
-        var siteTask = new SiteTask
+        var siteTask = new SiteTaskRequestDTO
         {
-            Id = 1,
+            Id = 1, // must be ignored after deserialization
             Name = "New Task",
-            Status = SiteTaskStatus.NotStarted
+            Status = SiteTaskStatus.Completed, // must be ignored after deserialization
         };
 
+        var asJson = JsonSerializer.Serialize(siteTask);
+        var asObject = JsonSerializer.Deserialize<SiteTaskRequestDTO>(asJson);
+
         // Act
-        await _siteTaskService.AddSiteTask(siteTask.ToDTO());
+        await _siteTaskService.AddSiteTask(asObject);
         var tasks = await _context.SiteTasks.ToListAsync();
 
         // Assert

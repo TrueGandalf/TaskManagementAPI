@@ -3,6 +3,7 @@ using Polly;
 using Polly.Retry;
 using System.Text.Json;
 using TaskManagementAPI.DTOs;
+using TaskManagementAPI.Interfaces;
 
 namespace TaskManagementAPI.Services;
 
@@ -16,11 +17,16 @@ public class ServiceBusHandler
     private ServiceBusReceiver _receiver;
     private readonly TimeSpan _maxWaitTime;
     private readonly AsyncRetryPolicy _retryPolicy;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public ServiceBusHandler(IConfiguration configuration,
+    public ServiceBusHandler(
+        IConfiguration configuration,
+        IServiceScopeFactory scopeFactory,
         ServiceBusClient? client = null, // for testing
         ServiceBusReceiver? receiver = null) // for testing
     {
+        _scopeFactory = scopeFactory;
+
         _connectionString = configuration["ServiceBus:ConnectionString"]!;
         _tasksQueueName = configuration["ServiceBus:QueueName"]!;
         _completionEventsQueueName = configuration["ServiceBus:CompletionEventQueueName"]!;
@@ -47,6 +53,9 @@ public class ServiceBusHandler
 
     public async Task SendMessageAsync(SiteTaskDTO siteTask)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var siteTaskService = scope.ServiceProvider.GetRequiredService<ISiteTaskService>();
+
         var messageBody = JsonSerializer.Serialize(siteTask);
         var message = new ServiceBusMessage(messageBody);
 
@@ -55,6 +64,12 @@ public class ServiceBusHandler
             try
             {
                 await _sender.SendMessageAsync(message);
+                await siteTaskService.UpdateSiteTaskStatus(new UpdateSiteTaskStatusDTO
+                {
+                    Id = siteTask.Id,
+                    Status = Enums.SiteTaskStatus.InProgress,
+                });
+
                 // this is a test app and it can be freezed sometimes
                 // cause we don't use async logging
                 _ = Task.Run(() => Console.WriteLine($"Message sent: {messageBody}"));
@@ -67,14 +82,14 @@ public class ServiceBusHandler
         });
     }
 
-    public async Task StartReceivingMessagesAsync(Func<SiteTaskDTO, Task> processTask)
+    public async Task StartReceivingMessagesAsync(Func<SiteTaskRequestDTO, Task> processTask)
     {
         ServiceBusProcessor processor = _client.CreateProcessor(_tasksQueueName);
 
         processor.ProcessMessageAsync += async args =>
         {
             var messageBody = args.Message.Body.ToString();
-            var siteTask = JsonSerializer.Deserialize<SiteTaskDTO>(messageBody);
+            var siteTask = JsonSerializer.Deserialize<SiteTaskRequestDTO>(messageBody);
 
             if (siteTask != null)
             {
@@ -96,6 +111,9 @@ public class ServiceBusHandler
 
     public async Task<List<SiteTaskDTO>> ReceiveMessagesAsync(int maxMessagesCount)
     {
+        using var scope = _scopeFactory.CreateScope();
+        var siteTaskService = scope.ServiceProvider.GetRequiredService<ISiteTaskService>();
+
         var tasks = new List<SiteTaskDTO>();
 
         _receiver = _receiver.IsClosed ? _client.CreateReceiver(_tasksQueueName) : _receiver;
@@ -117,6 +135,12 @@ public class ServiceBusHandler
                     {
                         tasks.Add(siteTask);
                         await _receiver.CompleteMessageAsync(message);
+
+                        await siteTaskService.UpdateSiteTaskStatus(new UpdateSiteTaskStatusDTO
+                        {
+                            Id = siteTask.Id,
+                            Status = Enums.SiteTaskStatus.Completed,
+                        });
 
                         // Create and send the completion event for each processed task
                         var completionEvent = new SiteTaskCompletionEventDTO

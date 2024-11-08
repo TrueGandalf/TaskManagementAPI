@@ -75,7 +75,7 @@ public class Program
     {
         var serviceBusHandler = app.Services.GetRequiredService<ServiceBusHandler>();
 
-        async Task ProcessTask(SiteTaskDTO task)
+        async Task ProcessTask(SiteTaskRequestDTO task)
         {
             Console.WriteLine($"Processing task: {task.Name}");
         }
