@@ -24,7 +24,7 @@ public class SiteTaskService : ISiteTaskService
         return entity.ToDTO();
     }
 
-    public async Task UpdateSiteTaskStatus(UpdateSiteTaskStatusDTO siteTaskWithNewStatus)
+    public async Task<bool> UpdateSiteTaskStatus(UpdateSiteTaskStatusDTO siteTaskWithNewStatus)
     {
         var siteTask = await _context.SiteTasks.FindAsync(siteTaskWithNewStatus.Id);
 
@@ -32,7 +32,10 @@ public class SiteTaskService : ISiteTaskService
         {
             siteTask.Status = siteTaskWithNewStatus.Status;
             await _context.SaveChangesAsync();
+            return true;
         }
+
+        return false;
     }
 
     public async Task<IEnumerable<SiteTaskDTO>> GetAllSiteTasks()

@@ -39,12 +39,20 @@ public class SiteTaskController : ControllerBase
     /// Updates the status of an existing task.
     /// </summary>
     /// <param name="siteTaskWithNewStatus">The task ID and new status.</param>
-    /// <returns>A success message confirming the task status update.</returns>
+    /// <returns>
+    /// A success message if the task status was updated, or a not found response if the task with the specified ID doesn’t exist.
+    /// </returns>
     [HttpPut]
     public async Task<IActionResult> UpdateSiteTaskStatus(
         [FromBody] UpdateSiteTaskStatusDTO siteTaskWithNewStatus)
     {
-        await _siteTaskService.UpdateSiteTaskStatus(siteTaskWithNewStatus);
+        bool isUpdated = await _siteTaskService.UpdateSiteTaskStatus(siteTaskWithNewStatus);
+
+        if (!isUpdated)
+        {
+            return NotFound($"Task with ID {siteTaskWithNewStatus.Id} was not found.");
+        }
+
         return Ok("Task status updated successfully.");
     }
 
