@@ -1,6 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using TaskManagementAPI.Data;
 using TaskManagementAPI.DTOs;
 using TaskManagementAPI.Enums;
@@ -17,6 +15,7 @@ public class SiteTaskService : ISiteTaskService
     {
         _context = context;
     }
+
     public async Task<SiteTaskDTO> AddSiteTask(SiteTaskDTO siteTask)
     {
         var entity = siteTask.ToEntity();

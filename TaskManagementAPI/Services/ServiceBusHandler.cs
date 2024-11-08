@@ -1,7 +1,8 @@
 ﻿using Azure.Messaging.ServiceBus;
 using System.Text.Json;
 using TaskManagementAPI.DTOs;
-using Microsoft.Extensions.Configuration;
+using Polly;
+using Polly.Retry;
 
 namespace TaskManagementAPI.Services;
 
@@ -13,6 +14,7 @@ public class ServiceBusHandler
     private readonly ServiceBusClient _client;
     private readonly ServiceBusSender _sender;
     private readonly TimeSpan _maxWaitTime;
+    private readonly AsyncRetryPolicy _retryPolicy;
 
     public ServiceBusHandler(IConfiguration configuration)
     {
@@ -28,6 +30,14 @@ public class ServiceBusHandler
             ? result : 5;
 
         _maxWaitTime = TimeSpan.FromSeconds(maxWaitTimeInSeconds);
+
+        _retryPolicy = Policy
+            .Handle<Exception>(ex => IsTransient(ex))
+            .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                (exception, timeSpan, retryCount, context) =>
+                {
+                    Console.WriteLine($"Retry {retryCount} for Service Bus operation due to error: {exception.Message}");
+                });
     }
 
     public async Task SendMessageAsync(SiteTaskDTO siteTask)
@@ -35,18 +45,21 @@ public class ServiceBusHandler
         var messageBody = JsonSerializer.Serialize(siteTask);
         var message = new ServiceBusMessage(messageBody);
 
-        try
+        await _retryPolicy.ExecuteAsync(async () =>
         {
-            await _sender.SendMessageAsync(message);
-            // this is a test app and it can be freezed sometimes
-            // cause we don't use async logging
-            _ = Task.Run(() => Console.WriteLine($"Message sent: {messageBody}"));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error sending message: {ex.Message}");
-            // todo: implement retry logic/log the exception
-        }
+            try
+            {
+                await _sender.SendMessageAsync(message);
+                // this is a test app and it can be freezed sometimes
+                // cause we don't use async logging
+                _ = Task.Run(() => Console.WriteLine($"Message sent: {messageBody}"));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending message: {ex.Message}");
+                throw;
+            }
+        });
     }
 
     public async Task StartReceivingMessagesAsync(Func<SiteTaskDTO, Task> processTask)
@@ -81,34 +94,44 @@ public class ServiceBusHandler
     {
         var tasks = new List<SiteTaskDTO>();
 
+        // Create the receiver outside the retry logic to avoid recreating it on every retry
         var receiver = _client.CreateReceiver(_tasksQueueName);
 
         try
         {
-            var receivedMessages = await receiver.ReceiveMessagesAsync(
-                maxMessages: maxMessagesCount,
-                maxWaitTime: _maxWaitTime);
-
-            foreach (var message in receivedMessages)
+            await _retryPolicy.ExecuteAsync(async () =>
             {
-                var messageBody = message.Body.ToString();
-                var siteTask = JsonSerializer.Deserialize<SiteTaskDTO>(messageBody);
+                var receivedMessages = await receiver.ReceiveMessagesAsync(
+                    maxMessages: maxMessagesCount,
+                    maxWaitTime: _maxWaitTime);
 
-                if (siteTask != null)
+                foreach (var message in receivedMessages)
                 {
-                    tasks.Add(siteTask);
-                    await receiver.CompleteMessageAsync(message);
+                    var messageBody = message.Body.ToString();
+                    var siteTask = JsonSerializer.Deserialize<SiteTaskDTO>(messageBody);
 
-                    var completionEvent = new SiteTaskCompletionEvent
+                    if (siteTask != null)
                     {
-                        TaskId = siteTask.Id,
-                        TaskName = siteTask.Name,
-                        Status = siteTask.Status.ToString(),
-                        CompletedAt = DateTime.UtcNow
-                    };
-                    await SendCompletionEventAsync(completionEvent);
+                        tasks.Add(siteTask);
+                        await receiver.CompleteMessageAsync(message);
+
+                        // Create and send the completion event for each processed task
+                        var completionEvent = new SiteTaskCompletionEvent
+                        {
+                            TaskId = siteTask.Id,
+                            TaskName = siteTask.Name,
+                            Status = siteTask.Status.ToString(),
+                            CompletedAt = DateTime.UtcNow
+                        };
+                        await SendCompletionEventAsync(completionEvent);
+                    }
                 }
-            }
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error receiving messages: {ex.Message}");
+            throw;
         }
         finally
         {
@@ -165,5 +188,11 @@ public class ServiceBusHandler
         {
             await sender.DisposeAsync();
         }
+    }
+
+    private bool IsTransient(Exception ex)
+    {
+        // Logic to determine if the exception is transient (network errors, timeouts, etc.)
+        return ex is ServiceBusException sbEx && sbEx.Reason == ServiceBusFailureReason.ServiceTimeout;
     }
 }
